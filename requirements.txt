@@ -1,4 +1,6 @@
 anthropic>=0.69.0
+google-genai>=1.0.0
+httpx>=0.28.0
 yfinance>=0.2.40
 pandas>=2.2
 pandas-ta

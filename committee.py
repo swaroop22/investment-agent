@@ -16,11 +16,10 @@ import sys
 import warnings
 from datetime import datetime, timezone
 
-import anthropic
-
 import prompts
 from agent import run_agent
-from config import MODEL, MAX_TOKENS
+from config import MODEL, MAX_TOKENS, DEFAULT_PROVIDER, default_model_for
+from providers import get_provider
 from schemas import (
     DEVILS_ADVOCATE_SCHEMA,
     FINAL_MEMO_SCHEMA,
@@ -262,21 +261,33 @@ def print_memo(memo: dict, tally: dict, usage_summary: dict):
 
 async def main_async(args):
     symbol = args.symbol.upper()
-    client = anthropic.AsyncAnthropic()
+    provider_name = getattr(args, "provider", None) or DEFAULT_PROVIDER
+    provider = get_provider(provider_name)
+    model = getattr(args, "model", None) or default_model_for(provider_name)
+
+    valid, warning = provider.validate_credentials()
+    if not valid and warning:
+        if provider.name == "gemini":
+            print(f"\n[Error] {warning}\n", file=sys.stderr)
+            sys.exit(1)
+        else:
+            print(f"Warning: {warning}", file=sys.stderr)
+
     tracker = UsageTracker()
     started_at = datetime.now(timezone.utc).isoformat()
 
+    print(f"Using provider: {provider.name} | Model: {model}")
     print(f"[1/4] Round 1 — Fundamental, Technical, Sentiment analysts (parallel)...")
-    round1 = await run_round1(client, symbol, tracker, args.model, args.max_tokens)
+    round1 = await run_round1(provider, symbol, tracker, model, args.max_tokens)
 
     print(f"[2/4] Round 2 — Risk Manager and Devil's Advocate (parallel)...")
-    round2 = await run_round2(client, symbol, round1, args.portfolio_context, tracker, args.model, args.max_tokens)
+    round2 = await run_round2(provider, symbol, round1, args.portfolio_context, tracker, model, args.max_tokens)
 
     print(f"[3/4] Round 3 — Analyst rebuttals (parallel)...")
-    round3 = await run_round3(client, symbol, round1, *round2, tracker, args.model, args.max_tokens)
+    round3 = await run_round3(provider, symbol, round1, *round2, tracker, model, args.max_tokens)
 
     print(f"[4/4] Final — Chair writes decision memo...")
-    chair_result = await run_chair(client, symbol, round1, round2, round3, tracker, args.model, args.max_tokens)
+    chair_result = await run_chair(provider, symbol, round1, round2, round3, tracker, model, args.max_tokens)
 
     tally = tally_votes(round3, *round2)
     print_memo(chair_result.parsed, tally, tracker.summary())
@@ -295,14 +306,16 @@ def main():
     parser.add_argument("symbol", help="Ticker symbol, e.g. MSFT")
     parser.add_argument("--portfolio-context", default="No specific portfolio context provided; assume a diversified retail portfolio with no existing position in this name.",
                          help="Free-text portfolio context for the Risk Manager")
-    parser.add_argument("--model", default=MODEL)
+    parser.add_argument("--provider", choices=["anthropic", "gemini"], default=DEFAULT_PROVIDER,
+                         help=f"LLM provider to use: 'anthropic' or 'gemini' (default: {DEFAULT_PROVIDER})")
+    parser.add_argument("--model", default=None,
+                         help="Model ID (defaults to provider default: e.g. claude-opus-5 for anthropic, gemini-2.5-flash for gemini)")
     parser.add_argument("--max-tokens", type=int, default=MAX_TOKENS)
     parser.add_argument("--out-dir", default="transcripts")
     args = parser.parse_args()
 
-    if not os.environ.get("ANTHROPIC_API_KEY") and not os.environ.get("ANTHROPIC_AUTH_TOKEN"):
-        print("Warning: ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN not set; "
-              "relying on default SDK credential resolution.", file=sys.stderr)
+    if args.model is None:
+        args.model = default_model_for(args.provider)
 
     asyncio.run(main_async(args))
 

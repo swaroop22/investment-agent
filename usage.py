@@ -32,14 +32,28 @@ class UsageTracker:
     calls: list = field(default_factory=list)
 
     def record(self, agent: str, round_name: str, model: str, usage) -> CallUsage:
+        input_tokens = getattr(usage, "input_tokens", None)
+        if input_tokens is None:
+            input_tokens = getattr(usage, "prompt_token_count", 0)
+
+        output_tokens = getattr(usage, "output_tokens", None)
+        if output_tokens is None:
+            output_tokens = getattr(usage, "candidates_token_count", 0)
+
+        cache_read = getattr(usage, "cache_read_input_tokens", None)
+        if cache_read is None:
+            cache_read = getattr(usage, "cached_content_token_count", 0)
+
+        cache_write = getattr(usage, "cache_creation_input_tokens", 0)
+
         call = CallUsage(
             agent=agent,
             round=round_name,
             model=model,
-            input_tokens=getattr(usage, "input_tokens", 0) or 0,
-            output_tokens=getattr(usage, "output_tokens", 0) or 0,
-            cache_creation_input_tokens=getattr(usage, "cache_creation_input_tokens", 0) or 0,
-            cache_read_input_tokens=getattr(usage, "cache_read_input_tokens", 0) or 0,
+            input_tokens=input_tokens or 0,
+            output_tokens=output_tokens or 0,
+            cache_creation_input_tokens=cache_write or 0,
+            cache_read_input_tokens=cache_read or 0,
         )
         self.calls.append(call)
         return call

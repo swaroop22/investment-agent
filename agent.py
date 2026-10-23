@@ -1,26 +1,17 @@
-"""Single-agent call: manual tool-use loop + structured JSON final answer."""
+"""Single-agent call: provider delegation + structured JSON final answer."""
 from __future__ import annotations
 
-import json
-from dataclasses import dataclass, field
-
-import anthropic
+from typing import Any
 
 from config import MODEL, MAX_TOKENS
+from providers.anthropic_provider import AnthropicProvider
+from providers.base import AgentResult, BaseProvider
 from tool_defs import DISPATCH
 from usage import UsageTracker
 
 
-@dataclass
-class AgentResult:
-    agent: str
-    round: str
-    parsed: dict
-    transcript: list = field(default_factory=list)  # full message list for this call
-
-
 async def run_agent(
-    client: anthropic.AsyncAnthropic,
+    provider_or_client: BaseProvider | Any,
     *,
     agent_name: str,
     round_name: str,
@@ -32,51 +23,23 @@ async def run_agent(
     model: str = MODEL,
     max_tokens: int = MAX_TOKENS,
 ) -> AgentResult:
-    messages = [{"role": "user", "content": user_content}]
-    tools = tools or []
+    """Execute a single agent's reasoning & tool loop using the configured provider."""
+    if isinstance(provider_or_client, BaseProvider):
+        provider = provider_or_client
+    else:
+        # Backward compatibility for direct Anthropic client instances (e.g. mock client)
+        provider = AnthropicProvider(client=provider_or_client)
 
-    output_config = {"format": {"type": "json_schema", "schema": output_schema}}
+    return await provider.run_agent(
+        agent_name=agent_name,
+        round_name=round_name,
+        system=system,
+        user_content=user_content,
+        output_schema=output_schema,
+        tools=tools,
+        dispatch=DISPATCH,
+        tracker=tracker,
+        model=model,
+        max_tokens=max_tokens,
+    )
 
-    # Tool-use loop: keep calling until Claude stops requesting tools.
-    while True:
-        kwargs = dict(
-            model=model,
-            max_tokens=max_tokens,
-            system=system,
-            messages=messages,
-            output_config=output_config,
-        )
-        if tools:
-            kwargs["tools"] = tools
-
-        response = await client.messages.create(**kwargs)
-        tracker.record(agent_name, round_name, model, response.usage)
-
-        if response.stop_reason == "tool_use":
-            messages.append({"role": "assistant", "content": response.content})
-            tool_results = []
-            for block in response.content:
-                if block.type != "tool_use":
-                    continue
-                try:
-                    result = DISPATCH[block.name](block.input)
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": json.dumps(result),
-                    })
-                except Exception as e:  # noqa: BLE001 - surface to the model as a tool error
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": f"Error running {block.name}: {e}",
-                        "is_error": True,
-                    })
-            messages.append({"role": "user", "content": tool_results})
-            continue
-
-        # Done — output_config guarantees the text block is valid JSON per schema.
-        messages.append({"role": "assistant", "content": response.content})
-        text = next(b.text for b in response.content if b.type == "text")
-        parsed = json.loads(text)
-        return AgentResult(agent=agent_name, round=round_name, parsed=parsed, transcript=messages)
