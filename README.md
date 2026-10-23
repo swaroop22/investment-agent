@@ -20,7 +20,19 @@ export PROVIDER=gemini                # or anthropic
 
 Requires Python 3.12+ (pandas-ta's current release needs it).
 
-## Usage
+## Web UI Dashboard
+
+Launch the interactive financial terminal dashboard:
+```bash
+./venv/bin/python server.py --port 8000
+```
+Open **[http://localhost:8000](http://localhost:8000)** in your browser to:
+- Browse all previous investment committee deliberations and transcripts.
+- View the executive consensus, vote tally, confidence meter, and position sizing.
+- Inspect round-by-round specialist reports (Fundamental, Technical, Sentiment, Risk Manager, Devil's Advocate, and Analyst Rebuttals).
+- Launch new committee deliberations directly from the UI with live progress streaming.
+
+## CLI Usage
 
 Run with Google Gemini:
 ```bash

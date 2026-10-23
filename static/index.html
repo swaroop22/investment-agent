@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Investment Committee Terminal | Multi-Agent AI Analysis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Top Navigation Bar -->
+    <header class="terminal-header">
+      <div class="brand">
+        <div class="logo-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+            <polyline points="16 7 22 7 22 13"></polyline>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">ALPHA<span>COMMITTEE</span></h1>
+          <p class="brand-sub">Autonomous Multi-Agent Investment Deliberation System</p>
+        </div>
+      </div>
+      
+      <div class="header-controls">
+        <div class="provider-pill" id="currentProviderPill">
+          <span class="pulse-dot"></span>
+          <span id="providerStatusText">Multi-Provider (Gemini & Anthropic)</span>
+        </div>
+        <button id="btnNewRun" class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="16"></line>
+            <line x1="8" y1="12" x2="16" y2="12"></line>
+          </svg>
+          New Committee Run
+        </button>
+      </div>
+    </header>
+
+    <div class="main-container">
+      <!-- Sidebar / Historical Reports List -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-title-row">
+            <h2>Analyses History</h2>
+            <span class="badge badge-subtle" id="historyCount">0</span>
+          </div>
+          <div class="search-box">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="searchInput" placeholder="Filter by ticker (e.g. AAPL)...">
+          </div>
+        </div>
+        
+        <div class="reports-list" id="reportsList">
+          <div class="loading-state">Loading analyses...</div>
+        </div>
+      </aside>
+
+      <!-- Main Analysis View -->
+      <main class="content-viewport" id="contentViewport">
+        <!-- Empty / Placeholder State -->
+        <div class="empty-state" id="emptyState" style="display: none;">
+          <div class="empty-icon">📊</div>
+          <h3>No Analysis Selected</h3>
+          <p>Select a report from the sidebar or start a new committee deliberation.</p>
+        </div>
+
+        <!-- Active Report Content -->
+        <div class="report-content" id="reportContent">
+          <!-- Executive Overview Hero Card -->
+          <section class="hero-card glass-panel" id="heroCard">
+            <div class="hero-main-row">
+              <div class="hero-meta">
+                <div class="ticker-badge" id="heroTicker">AAPL</div>
+                <div class="hero-timing">
+                  <span id="heroDate">Oct 23, 2026</span> &bull; <span id="heroExecutionTime">Duration: 2.9s</span>
+                </div>
+              </div>
+
+              <div class="hero-decision-block">
+                <div class="decision-label">COMMITTEE CONSENSUS</div>
+                <div class="decision-badge" id="heroDecision">BUY</div>
+              </div>
+
+              <div class="hero-metric-block">
+                <div class="metric-title">CONFIDENCE</div>
+                <div class="confidence-ring-wrap">
+                  <div class="confidence-val" id="heroConfidence">85%</div>
+                </div>
+              </div>
+
+              <div class="hero-tally-block">
+                <div class="metric-title">COMMITTEE VOTE TALLY</div>
+                <div class="vote-bars" id="heroVoteBars">
+                  <div class="vote-bar-fill buy-fill" style="width: 40%">2 Buy</div>
+                  <div class="vote-bar-fill hold-fill" style="width: 0%">0 Hold</div>
+                  <div class="vote-bar-fill sell-fill" style="width: 60%">3 Sell</div>
+                </div>
+                <div class="vote-legend">
+                  <span class="legend-dot dot-buy"></span> Buy (<span id="countBuy">2</span>)
+                  <span class="legend-dot dot-hold"></span> Hold (<span id="countHold">0</span>)
+                  <span class="legend-dot dot-sell"></span> Sell (<span id="countSell">3</span>)
+                </div>
+              </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="hero-stats-bar">
+              <div class="stat-item">
+                <span class="stat-label">Total LLM Calls:</span>
+                <span class="stat-val" id="statCalls">12</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Total Tokens:</span>
+                <span class="stat-val" id="statTokens">2,400</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Estimated Cost:</span>
+                <span class="stat-val" id="statCost">$0.0312</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Deliberation Protocol:</span>
+                <span class="stat-val" id="statRounds">4 Rounds (Parallel)</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Navigation Tabs -->
+          <nav class="report-tabs">
+            <button class="tab-btn active" data-tab="tab-memo">
+              <span class="tab-icon">📋</span> Final Decision Memo
+            </button>
+            <button class="tab-btn" data-tab="tab-round1">
+              <span class="tab-icon">🔍</span> Round 1: Specialists
+            </button>
+            <button class="tab-btn" data-tab="tab-round2">
+              <span class="tab-icon">⚖️</span> Round 2: Risk & Devil's Advocate
+            </button>
+            <button class="tab-btn" data-tab="tab-round3">
+              <span class="tab-icon">⚔️</span> Round 3: Rebuttals
+            </button>
+            <button class="tab-btn" data-tab="tab-tools">
+              <span class="tab-icon">🔬</span> Market Tools & Raw Data
+            </button>
+          </nav>
+
+          <!-- Tab 1: Final Decision Memo -->
+          <section class="tab-pane active" id="tab-memo">
+            <div class="card glass-panel memo-section">
+              <h3 class="section-title">Executive Summary</h3>
+              <p class="memo-summary-text" id="memoExecutiveSummary"></p>
+            </div>
+
+            <div class="memo-grid">
+              <div class="card glass-panel">
+                <div class="card-header-icon blue">📊</div>
+                <h4>Fundamental Synthesis</h4>
+                <p id="memoFundamentalView"></p>
+              </div>
+
+              <div class="card glass-panel">
+                <div class="card-header-icon cyan">📈</div>
+                <h4>Technical Synthesis</h4>
+                <p id="memoTechnicalView"></p>
+              </div>
+
+              <div class="card glass-panel">
+                <div class="card-header-icon purple">📰</div>
+                <h4>Sentiment Synthesis</h4>
+                <p id="memoSentimentView"></p>
+              </div>
+
+              <div class="card glass-panel">
+                <div class="card-header-icon red">⚠️</div>
+                <h4>Risk Assessment</h4>
+                <p id="memoRiskAssessment"></p>
+              </div>
+            </div>
+
+            <div class="memo-split-grid">
+              <div class="card glass-panel">
+                <h3 class="section-title text-amber">Devil's Advocate Challenge</h3>
+                <p id="memoDevilsAdvocate"></p>
+              </div>
+              <div class="card glass-panel">
+                <h3 class="section-title text-emerald">Position Sizing Guidance</h3>
+                <p id="memoPositionSizing" class="highlight-box"></p>
+              </div>
+            </div>
+
+            <div class="catalysts-grid">
+              <div class="card glass-panel">
+                <h3 class="section-title text-emerald">Key Catalysts to Watch</h3>
+                <ul class="styled-list emerald-check" id="memoCatalystsList"></ul>
+              </div>
+              <div class="card glass-panel">
+                <h3 class="section-title text-rose">Invalidation Conditions</h3>
+                <ul class="styled-list rose-cross" id="memoInvalidationList"></ul>
+              </div>
+            </div>
+          </section>
+
+          <!-- Tab 2: Round 1 Specialist Analysts -->
+          <section class="tab-pane" id="tab-round1">
+            <div class="specialists-grid" id="round1Cards">
+              <!-- Dynamically rendered -->
+            </div>
+          </section>
+
+          <!-- Tab 3: Round 2 Risk & Devil's Advocate -->
+          <section class="tab-pane" id="tab-round2">
+            <div class="specialists-grid" id="round2Cards">
+              <!-- Dynamically rendered -->
+            </div>
+          </section>
+
+          <!-- Tab 4: Round 3 Rebuttals -->
+          <section class="tab-pane" id="tab-round3">
+            <div class="specialists-grid" id="round3Cards">
+              <!-- Dynamically rendered -->
+            </div>
+          </section>
+
+          <!-- Tab 5: Market Tools & Raw Data -->
+          <section class="tab-pane" id="tab-tools">
+            <div class="card glass-panel">
+              <div class="tools-header-row">
+                <div>
+                  <h3 class="section-title">Market Tools & Execution Audit</h3>
+                  <p class="section-sub">Inspect real Yahoo Finance financials, pandas-ta technical indicators, and sentiment metrics called by agents.</p>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="btnCopyRawJson">Copy Full Transcript JSON</button>
+              </div>
+              <div class="tools-accordion" id="toolsAccordion">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <!-- New Run Modal -->
+    <div class="modal-backdrop" id="runModal">
+      <div class="modal-card glass-panel">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <div class="logo-icon-sm">⚡</div>
+            <h3>Launch Investment Committee</h3>
+          </div>
+          <button class="modal-close-btn" id="modalCloseBtn">&times;</button>
+        </div>
+
+        <form id="runForm">
+          <div class="form-group">
+            <label for="inputSymbol">Stock Ticker Symbol</label>
+            <div class="input-with-chips">
+              <input type="text" id="inputSymbol" placeholder="e.g. NVDA, AAPL, MSFT, TSLA" required maxlength="10" autocomplete="off">
+              <div class="quick-chips">
+                <span class="chip" data-ticker="NVDA">NVDA</span>
+                <span class="chip" data-ticker="AAPL">AAPL</span>
+                <span class="chip" data-ticker="MSFT">MSFT</span>
+                <span class="chip" data-ticker="GOOGL">GOOGL</span>
+                <span class="chip" data-ticker="TSLA">TSLA</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="selectProvider">LLM Provider</label>
+              <select id="selectProvider">
+                <option value="gemini">Google Gemini (Recommended)</option>
+                <option value="anthropic">Anthropic Claude</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="selectModel">Model</label>
+              <select id="selectModel">
+                <!-- Populated dynamically based on provider -->
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="inputPortfolioContext">Portfolio Context (Optional for Risk Manager)</label>
+            <textarea id="inputPortfolioContext" rows="2" placeholder="e.g. 10% cash reserve, tech-heavy portfolio, max 5% position limit per stock..."></textarea>
+          </div>
+
+          <div class="form-group checkbox-group">
+            <label class="custom-checkbox">
+              <input type="checkbox" id="checkDryRun">
+              <span class="checkmark"></span>
+              <span class="checkbox-label">
+                <strong>Simulation / Dry-Run Mode</strong>
+                <span class="subtext">Exercises real Yahoo Finance market tools with mock LLM logic (Zero API keys or cost required).</span>
+              </span>
+            </label>
+          </div>
+
+          <!-- Live Progress Box (Shown when running) -->
+          <div class="progress-box" id="runProgressBox" style="display: none;">
+            <div class="progress-header">
+              <span class="spinner"></span>
+              <span id="progressStatusText">Starting committee deliberation...</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="progressFill" style="width: 10%"></div>
+            </div>
+            <div class="progress-stages">
+              <span class="stage-step" id="stage-round1">1. Specialists</span>
+              <span class="stage-step" id="stage-round2">2. Risk Challenge</span>
+              <span class="stage-step" id="stage-round3">3. Rebuttals</span>
+              <span class="stage-step" id="stage-final">4. Final Memo</span>
+            </div>
+            <div class="progress-logs" id="progressLogs"></div>
+          </div>
+
+          <div class="modal-actions" id="modalActions">
+            <button type="button" class="btn btn-secondary" id="btnCancelRun">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="btnSubmitRun">
+              <span>Execute Committee Debate</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
