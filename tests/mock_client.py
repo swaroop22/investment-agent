@@ -57,7 +57,7 @@ _ENUM_DEFAULTS = {
 }
 
 
-def _placeholder_for_schema(schema: dict, path_hint: str = ""):
+def _placeholder_for_schema(schema: dict, path_hint: str = "", active_symbol: str = "AAPL"):
     """Produce a minimal value satisfying a JSON-schema fragment."""
     t = schema.get("type")
     if "const" in schema:
@@ -67,11 +67,13 @@ def _placeholder_for_schema(schema: dict, path_hint: str = ""):
     if t == "object":
         props = schema.get("properties", {})
         required = schema.get("required", list(props.keys()))
-        return {k: _placeholder_for_schema(props[k], k) for k in required}
+        return {k: _placeholder_for_schema(props[k], k, active_symbol) for k in required}
     if t == "array":
         item_schema = schema.get("items", {"type": "string"})
-        return [_placeholder_for_schema(item_schema, path_hint), _placeholder_for_schema(item_schema, path_hint)]
+        return [_placeholder_for_schema(item_schema, path_hint, active_symbol), _placeholder_for_schema(item_schema, path_hint, active_symbol)]
     if t == "string":
+        if path_hint == "symbol":
+            return active_symbol
         return f"[mock {path_hint or 'text'}]"
     if t == "number":
         return round(random.uniform(0.4, 0.9), 2)
@@ -90,6 +92,15 @@ class FakeMessagesResource:
         self.call_count += 1
         tools = tools or []
 
+        # Detect symbol from user message if possible
+        active_symbol = "AAPL"
+        first_content = messages[0].get("content", "") if messages else ""
+        if isinstance(first_content, str):
+            import re
+            m = re.search(r"\b([A-Z]{1,5})\b", first_content)
+            if m:
+                active_symbol = m.group(1)
+
         last_msg = messages[-1]
         had_tool_results = (
             isinstance(last_msg["content"], list)
@@ -102,14 +113,15 @@ class FakeMessagesResource:
             # First turn with tools available: call every declared tool once (parallel tool use).
             blocks = []
             for i, tool in enumerate(tools):
-                blocks.append(FakeToolUseBlock(f"toolu_{self.call_count}_{i}", tool["name"], {"symbol": "AAPL"}))
+                blocks.append(FakeToolUseBlock(f"toolu_{self.call_count}_{i}", tool["name"], {"symbol": active_symbol}))
             return FakeMessage(content=blocks, stop_reason="tool_use")
 
         # Either no tools, or tools already satisfied — return the structured JSON answer.
         schema = (output_config or {}).get("format", {}).get("schema", {"type": "object", "properties": {}})
-        payload = _placeholder_for_schema(schema)
+        payload = _placeholder_for_schema(schema, active_symbol=active_symbol)
         text = json.dumps(payload)
         return FakeMessage(content=[FakeTextBlock(text)], stop_reason="end_turn")
+
 
 
 class FakeAsyncAnthropic:
