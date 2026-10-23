@@ -1,0 +1,6 @@
+venv/
+__pycache__/
+*.pyc
+.idea/
+transcripts/*.json
+.DS_Store

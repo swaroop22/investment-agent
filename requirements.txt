@@ -1,0 +1,5 @@
+anthropic>=0.69.0
+yfinance>=0.2.40
+pandas>=2.2
+pandas-ta
+numpy>=2.0
